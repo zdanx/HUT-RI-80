@@ -1,6 +1,6 @@
-import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { getFirestore, collection, addDoc, onSnapshot, query, serverTimestamp, doc, setDoc, getDoc, where, getDocs, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.1.0/firebase-app.js";
+import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.1.0/firebase-auth.js";
+import { getFirestore, collection, addDoc, onSnapshot, query, serverTimestamp, doc, setDoc, getDoc, where, getDocs, deleteDoc, orderBy } from "https://www.gstatic.com/firebasejs/10.1.0/firebase-firestore.js";
 
 // KONFIGURASI FIREBASE ANDA SENDIRI
 const firebaseConfig = {
@@ -31,6 +31,8 @@ let deleteImageId = null;
 
 // Elemen untuk tampilan status login
 const loginStatusDisplay = document.getElementById('login-status-display');
+const celebratorsListContainer = document.getElementById('celebrators-list-container');
+const imageGalleryContainer = document.getElementById('image-gallery-container');
 
 // Elemen modal gambar penuh
 const fullImageModalOverlay = document.getElementById('full-image-modal-overlay');
@@ -39,9 +41,7 @@ const closeFullImageBtn = document.getElementById('close-full-image-btn');
 
 // New: WhatsApp Upload Link element
 const whatsappUploadLink = document.getElementById('whatsapp-upload-link');
-// Replace with your actual WhatsApp number for the auto-filled message
-const adminWhatsAppNumber = '6282155498976'; 
-
+const adminWhatsAppNumber = '6282155498976';
 
 function showMessageBox(message, type = 'success') {
     const msgBox = document.getElementById('message-box');
@@ -56,7 +56,6 @@ function showMessageBox(message, type = 'success') {
     }
 }
 
-// Function to update user name display (for login status)
 function updateUserNameDisplay() {
     if (loginStatusDisplay) {
         if (currentUserName) {
@@ -66,23 +65,19 @@ function updateUserNameDisplay() {
         } else {
             loginStatusDisplay.textContent = `Tidak login`;
         }
-        
-        // Add show class to trigger fade-in
+
         loginStatusDisplay.classList.add('show');
-        // Remove fade-out class if it was previously applied
         loginStatusDisplay.classList.remove('fade-out');
 
-        // Set timeout to fade out and hide after 3 seconds
         setTimeout(() => {
             loginStatusDisplay.classList.add('fade-out');
             setTimeout(() => {
                 loginStatusDisplay.classList.remove('show', 'fade-out');
-            }, 500); // Duration of fadeOut animation
-        }, 3000); // 3 seconds before starting fade out
+            }, 500);
+        }, 3000);
     }
 }
 
-// Function to update the WhatsApp link with user info
 function updateWhatsAppLink() {
     if (whatsappUploadLink && currentUserName && currentUserId) {
         const message = encodeURIComponent(
@@ -91,11 +86,9 @@ function updateWhatsAppLink() {
             `ID Pengguna saya: ${currentUserId}`
         );
         whatsappUploadLink.href = `https://wa.me/${adminWhatsAppNumber}?text=${message}`;
-        whatsappUploadLink.classList.remove('hidden'); // Ensure the link is visible if it was hidden
+        whatsappUploadLink.classList.remove('hidden');
     } else if (whatsappUploadLink) {
-        // Fallback or hide if user info isn't fully loaded yet
-        whatsappUploadLink.href = '#'; // No action
-        // whatsappUploadLink.classList.add('hidden'); // Optional: hide until ready
+        whatsappUploadLink.href = '#';
     }
 }
 
@@ -109,7 +102,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     const celebrationMessage = document.getElementById('celebration-message');
     const countdownMessage = document.getElementById('countdown-message');
     const confettiContainer = document.getElementById('confetti-container');
-    const imageGalleryContainer = document.getElementById('image-gallery-container');
     const userIdDisplay = document.getElementById('user-id-display');
 
     const nameModalOverlay = document.getElementById('name-modal-overlay');
@@ -168,7 +160,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 setupGalleryListener();
                 setupCelebratorsListener();
                 await checkIfAlreadyCelebrated();
-                updateWhatsAppLink(); // Call this after user info is ready
+                updateWhatsAppLink();
 
                 if (loadingScreen) {
                     loadingScreen.style.opacity = '0';
@@ -336,7 +328,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     existingCelebrationDocId = newDocRef.id;
                     showMessageBox("Perayaan Anda telah direkam! Merdeka!", "success");
                 }
-                
+
                 if (celebrationMessage) {
                     celebrationMessage.classList.remove('hidden');
                 }
@@ -365,7 +357,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
 
         confirmModalOverlay.classList.remove('hidden');
-        
+
         return new Promise((resolve) => {
             const onConfirm = async () => {
                 confirmModalOverlay.classList.add('hidden');
@@ -436,7 +428,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             imgWrapper.appendChild(imgElement);
             imgWrapper.appendChild(caption);
-            
+
             if (currentUserId === imgData.userId) {
                 const deleteButton = document.createElement('button');
                 deleteButton.className = 'absolute top-3 right-3 bg-red-600 hover:bg-red-700 text-white p-1.5 rounded-full shadow-md transition-opacity duration-200 opacity-80 hover:opacity-100 focus:outline-none';
@@ -475,7 +467,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         celebrators.forEach(celebratorData => {
             const card = document.createElement('div');
             card.className = 'bg-white p-4 rounded-lg shadow-md text-center transform transition-transform duration-200 hover:scale-105 flex flex-col items-center';
-            
+
             if (celebratorData.userImageUrl) {
                 const imgElement = document.createElement('img');
                 imgElement.src = celebratorData.userImageUrl;
@@ -509,13 +501,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     function setupCelebratorsListener() {
         try {
             const celebratorsCollectionRef = collection(db, `artifacts/${appId}/public/data/celebrators`);
-            const q = query(celebratorsCollectionRef);
+            const q = query(celebratorsCollectionRef, orderBy("timestamp", "desc"));
             onSnapshot(q, (snapshot) => {
                 const celebrators = [];
                 snapshot.forEach(doc => {
                     celebrators.push({ id: doc.id, ...doc.data() });
                 });
-                celebrators.sort((a, b) => (b.timestamp?.seconds || 0) - (a.timestamp?.seconds || 0));
                 renderCelebrators(celebrators);
             }, (error) => {
                 console.error("Error fetching celebrators:", error);
@@ -531,12 +522,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     function setupGalleryListener() {
         try {
             const galleryCollectionRef = collection(db, `artifacts/${appId}/public/data/gallery_images`);
-            onSnapshot(query(galleryCollectionRef), (snapshot) => {
+            const q = query(galleryCollectionRef, orderBy("timestamp", "desc"));
+            onSnapshot(q, (snapshot) => {
                 const images = [];
                 snapshot.forEach(doc => {
                     images.push({ id: doc.id, ...doc.data() });
                 });
-                images.sort((a, b) => (b.timestamp?.seconds || 0) - (a.timestamp?.seconds || 0));
                 renderGallery(images);
             }, (error) => {
                 console.error("Error fetching gallery images:", error);
@@ -561,7 +552,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                          await setDoc(userProfileRef, { name: name, createdAt: serverTimestamp() }, { merge: true });
                          showMessageBox("Nama Anda telah disimpan!", "success");
                          updateUserNameDisplay();
-                         updateWhatsAppLink(); // Also update WhatsApp link after name is saved
+                         updateWhatsAppLink();
                      } catch (error) {
                          console.error("Error saving name to Firestore:", error);
                          showMessageBox("Gagal menyimpan nama ke cloud. Disimpan secara lokal saja.", "error");
@@ -572,7 +563,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                 if (nameModalOverlay) nameModalOverlay.classList.remove('show');
                 updateUserNameDisplay();
-                updateWhatsAppLink(); // Update WhatsApp link after name modal is closed
+                updateWhatsAppLink();
             } else {
                 showMessageBox("Nama tidak boleh kosong!", "error");
             }
