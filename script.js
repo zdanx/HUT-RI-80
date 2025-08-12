@@ -37,6 +37,12 @@ const fullImageModalOverlay = document.getElementById('full-image-modal-overlay'
 const fullImageDisplay = document.getElementById('full-image-display');
 const closeFullImageBtn = document.getElementById('close-full-image-btn');
 
+// New: WhatsApp Upload Link element
+const whatsappUploadLink = document.getElementById('whatsapp-upload-link');
+// Replace with your actual WhatsApp number for the auto-filled message
+const adminWhatsAppNumber = '6282155498976'; 
+
+
 function showMessageBox(message, type = 'success') {
     const msgBox = document.getElementById('message-box');
     if (msgBox) {
@@ -75,6 +81,24 @@ function updateUserNameDisplay() {
         }, 3000); // 3 seconds before starting fade out
     }
 }
+
+// Function to update the WhatsApp link with user info
+function updateWhatsAppLink() {
+    if (whatsappUploadLink && currentUserName && currentUserId) {
+        const message = encodeURIComponent(
+            `Halo, saya ingin mengirim foto untuk galeri HUT RI ke-80.\n` +
+            `Nama saya: ${currentUserName}\n` +
+            `ID Pengguna saya: ${currentUserId}`
+        );
+        whatsappUploadLink.href = `https://wa.me/${adminWhatsAppNumber}?text=${message}`;
+        whatsappUploadLink.classList.remove('hidden'); // Ensure the link is visible if it was hidden
+    } else if (whatsappUploadLink) {
+        // Fallback or hide if user info isn't fully loaded yet
+        whatsappUploadLink.href = '#'; // No action
+        // whatsappUploadLink.classList.add('hidden'); // Optional: hide until ready
+    }
+}
+
 
 document.addEventListener('DOMContentLoaded', async () => {
     console.log("DOM Content Loaded.");
@@ -144,6 +168,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 setupGalleryListener();
                 setupCelebratorsListener();
                 await checkIfAlreadyCelebrated();
+                updateWhatsAppLink(); // Call this after user info is ready
 
                 if (loadingScreen) {
                     loadingScreen.style.opacity = '0';
@@ -249,8 +274,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 if (celebrateButton) {
                     celebrateButton.textContent = 'KLIK UNTUK MERAYAKAN!';
                     celebrateButton.disabled = false;
-                    celebrateButton.classList.remove('bg-red-600', 'hover:bg-red-700');
-                    celebrateButton.classList.add('bg-red-600', 'hover:bg-red-700'); // Ensure it's active
+                    celebrateButton.classList.remove('bg-gray-400', 'cursor-not-allowed');
+                    celebrateButton.classList.add('bg-red-600', 'hover:bg-red-700');
                 }
                 if (celebrationMessage) {
                     celebrationMessage.classList.add('hidden');
@@ -536,6 +561,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                          await setDoc(userProfileRef, { name: name, createdAt: serverTimestamp() }, { merge: true });
                          showMessageBox("Nama Anda telah disimpan!", "success");
                          updateUserNameDisplay();
+                         updateWhatsAppLink(); // Also update WhatsApp link after name is saved
                      } catch (error) {
                          console.error("Error saving name to Firestore:", error);
                          showMessageBox("Gagal menyimpan nama ke cloud. Disimpan secara lokal saja.", "error");
@@ -546,6 +572,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                 if (nameModalOverlay) nameModalOverlay.classList.remove('show');
                 updateUserNameDisplay();
+                updateWhatsAppLink(); // Update WhatsApp link after name modal is closed
             } else {
                 showMessageBox("Nama tidak boleh kosong!", "error");
             }
